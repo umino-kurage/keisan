@@ -6,91 +6,64 @@
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
-        h2 { text-align: center; color: #333; }
-        .header-row { display: flex; gap: 8px; margin-bottom: 5px; padding: 0 5px; font-weight: bold; font-size: 13px; color: #555; }
-        .header-row div { flex: 1; text-align: center; }
-        .header-row .btn-space { width: 30px; flex: none; }
         .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
-        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
+        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
     <h2>発注最適化</h2>
-    <div class="header-row">
-        <div>項目名</div><div>規定数</div><div>注文数</div><div class="btn-space"></div>
-    </div>
-
     <div id="itemsContainer">
         <div class="row">
             <input type="text" class="name" value="項目A"><input type="number" class="inner" value="7"><input type="number" class="order" value="15">
-            <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>
         </div>
         <div class="row">
             <input type="text" class="name" value="項目B"><input type="number" class="inner" value="3"><input type="number" class="order" value="5">
-            <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>
         </div>
     </div>
 
-    <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
     <button class="btn-calc" onclick="calculate()">調整計算</button>
-
     <div id="result"></div>
 
     <script>
-        function addRow() {
-            const div = document.createElement('div');
-            div.className = 'row';
-            div.innerHTML = `<input type="text" class="name" placeholder="名"><input type="number" class="inner" placeholder="規"><input type="number" class="order" placeholder="注">
-                             <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>`;
-            document.getElementById('itemsContainer').appendChild(div);
-        }
-
         function calculate() {
             const rows = document.querySelectorAll('.row');
             const items = [];
+            let maxCurrentSets = 0;
             rows.forEach(r => {
-                items.push({
-                    name: r.querySelector('.name').value,
-                    inner: parseInt(r.querySelector('.inner').value) || 1,
-                    order: parseInt(r.querySelector('.order').value) || 0
-                });
+                const inner = parseInt(r.querySelector('.inner').value);
+                const order = parseInt(r.querySelector('.order').value);
+                // 今の注文数が何インナー分あるか（切り上げ）
+                const sets = Math.ceil(order / inner);
+                if(sets > maxCurrentSets) maxCurrentSets = sets;
+                items.push({ name: r.querySelector('.name').value, inner, order, sets });
             });
-
-            const plans = [];
-            // 「セット数(s)」を1〜10まで計算
-            for (let s = 1; s <= 10; s++) {
-                let totalDiff = 0;
-                let details = [];
-                items.forEach(item => {
-                    const targetPerSet = item.inner * s; // そのセット数における「ピッタリ数」
-                    const diff = Math.max(0, targetPerSet - item.order); // 足す必要がある数
-                    totalDiff += diff;
-                    details.push({ name: item.name, targetPerSet, order: item.order, diff });
-                });
-                plans.push({ s, totalDiff, details });
-            }
-
-            // 調整合計が少ない順（＝希望数に一番近いセット数順）に並び替え
-            plans.sort((a, b) => a.totalDiff - b.totalDiff);
 
             const res = document.getElementById('result');
             res.innerHTML = "";
-            plans.slice(0, 2).forEach(p => {
-                let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）にする場合】</strong><br>
-                            調整合計: ${p.totalDiff}個の追加が必要<br><br>`;
-                p.details.forEach(d => {
-                    const actual = Math.max(d.order, d.targetPerSet); // 実際の発注数
-                    html += `<strong>${d.name}</strong><br>
-                             ・規定ピッタリ数: ${d.targetPerSet}個<br>
-                             ・発注する数: <strong>${actual}個</strong> (${d.diff > 0 ? d.diff + ' 足す' : 'そのままでOK'})<br><br>`;
+
+            // 現在の最大インナー数からスタートして、3パターン提案
+            for(let s = maxCurrentSets; s <= maxCurrentSets + 2; s++) {
+                let totalDiff = 0;
+                let details = [];
+                items.forEach(item => {
+                    const target = item.inner * s; // そのセット数におけるピッタリ数
+                    const diff = target - item.order; // 差分（プラスなら足す、マイナスなら減らす）
+                    totalDiff += Math.abs(diff);
+                    details.push({ name: item.name, target, diff });
+                });
+
+                let html = `<div class="pattern"><strong>【${s}インナーに揃える場合】</strong><br>
+                            調整数合計: ${totalDiff}個<br>`;
+                details.forEach(d => {
+                    let action = d.diff > 0 ? `${d.diff} 足す` : (d.diff < 0 ? `${Math.abs(d.diff)} 減らす` : "そのまま");
+                    html += `・${d.name}: ピッタリ${d.target}個 (今の注文数${d.order} → ${action})<br>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
-            });
+            }
         }
     </script>
 </body>
