@@ -3,72 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>セット発注管理ツール</title>
+    <title>セット発注最適化ツール</title>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; }
-        h2 { text-align: center; }
-        .header-row { display: flex; gap: 10px; margin-bottom: 5px; padding: 0 10px; font-weight: bold; color: #555; }
-        .header-row div { flex: 1; text-align: center; font-size: 13px; }
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f7f6; }
         .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 10px; align-items: center; }
-        input { flex: 1; min-width: 60px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #result { margin-top: 20px; padding: 20px; border-radius: 8px; }
-        .ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .ng { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        #result { margin-top: 20px; padding: 20px; border-radius: 8px; background: #fff; border: 1px solid #ccc; line-height: 1.8; }
+        .pattern { background: #e7f3ff; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 5px solid #007bff; }
     </style>
 </head>
 <body>
 
-    <h2>セット発注管理</h2>
-    
-    <div class="header-row">
-        <div>項目名</div>
-        <div>規定数(セット分)</div>
-        <div>注文数</div>
+    <h2>セット発注最適化</h2>
+    <div style="display: flex; gap: 10px; margin-bottom: 5px; padding: 0 10px; font-weight: bold; font-size: 13px; color: #555;">
+        <div style="flex:1;">項目名</div><div style="flex:1;">規定数</div><div style="flex:1;">注文数</div>
     </div>
 
     <div id="itemsContainer">
         <div class="row">
-            <input type="text" class="name" value="項目A">
-            <input type="number" class="inner" value="7">
-            <input type="number" class="order" value="0">
+            <input type="text" class="name" value="項目A"><input type="number" class="inner" value="7"><input type="number" class="order" value="15">
         </div>
         <div class="row">
-            <input type="text" class="name" value="項目B">
-            <input type="number" class="inner" value="3">
-            <input type="number" class="order" value="0">
+            <input type="text" class="name" value="項目B"><input type="number" class="inner" value="3"><input type="number" class="order" value="5">
         </div>
     </div>
 
-    <button onclick="calculate()">セット判定と修正案を表示</button>
+    <button onclick="calculate()">調整パターンを計算する</button>
     <div id="result" style="display:none;"></div>
 
     <script>
         function calculate() {
             const rows = document.querySelectorAll('.row');
-            const resDiv = document.getElementById('result');
-            let isAllOk = true;
-            let report = "<strong>【セット整合性レポート】</strong><br><br>";
-
-            rows.forEach(row => {
-                const name = row.querySelector('.name').value;
-                const inner = parseInt(row.querySelector('.inner').value) || 0;
-                const order = parseInt(row.querySelector('.order').value) || 0;
-
-                if (order % inner !== 0) {
-                    isAllOk = false;
-                    const remainder = order % inner;
-                    const add = inner - remainder;
-                    report += `・<strong>${name}</strong>: 不足！<br>
-                               &nbsp;&nbsp;あと <strong>${add}個 追加</strong> または <strong>${remainder}個 減らして</strong>単位を揃えてください<br><br>`;
-                } else {
-                    report += `・<strong>${name}</strong>: ${order/inner}セット分でOK<br><br>`;
-                }
+            const data = [];
+            rows.forEach(r => {
+                data.push({
+                    name: r.querySelector('.name').value,
+                    inner: parseInt(r.querySelector('.inner').value),
+                    order: parseInt(r.querySelector('.order').value)
+                });
             });
 
-            resDiv.style.display = "block";
-            resDiv.className = isAllOk ? "ok" : "ng";
-            resDiv.innerHTML = isAllOk ? "<strong>◎ 完璧です！全項目がセット単位で揃っています。</strong>" : report;
+            // A. 下に切り捨てて合わせるパターン
+            let downHtml = "<strong>【減らして揃える案】</strong><br>";
+            data.forEach(item => {
+                const target = Math.floor(item.order / item.inner) * item.inner;
+                downHtml += `${item.name}: ${item.order} → <strong>${target}個 ( ${item.order - target}個減らす )</strong><br>`;
+            });
+
+            // B. 上に切り上げて合わせるパターン
+            let upHtml = "<strong>【増やして揃える案】</strong><br>";
+            data.forEach(item => {
+                const target = Math.ceil(item.order / item.inner) * item.inner;
+                upHtml += `${item.name}: ${item.order} → <strong>${target}個 ( ${target - item.order}個増やす )</strong><br>`;
+            });
+
+            document.getElementById('result').style.display = "block";
+            document.getElementById('result').innerHTML = `<div class="pattern">${downHtml}</div><div class="pattern">${upHtml}</div>`;
         }
     </script>
 </body>
