@@ -3,27 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>発注最適化ツール</title>
+    <title>セット発注計算ツール</title>
     <style>
-        body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; margin: 0; }
+        body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
         h2 { text-align: center; color: #333; }
-        .header-row { display: flex; gap: 5px; margin-bottom: 5px; font-weight: bold; font-size: 12px; color: #666; text-align: center; }
-        .header-row div { flex: 1; }
-        .row { background: white; padding: 10px; margin-bottom: 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; gap: 8px; align-items: center; }
+        .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-add { background: #6c757d; color: white; margin-bottom: 20px; }
-        .btn-calc { background: #007bff; color: white; }
-        .result-box { background: white; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 20px; line-height: 1.6; }
-        .pattern-title { font-weight: bold; color: #444; border-bottom: 2px solid #eee; margin: 10px 0 5px 0; }
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 20px; }
+        .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
+        .result-box { background: white; padding: 15px; border-radius: 10px; border: 1px solid #28a745; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <h2>発注最適化ツール</h2>
-    
-    <div class="header-row">
-        <div>項目名</div><div>規定数</div><div>注文数</div><div></div>
+    <h2>セット発注計算</h2>
+    <div style="display: flex; gap: 5px; font-weight: bold; font-size: 12px; color: #666; margin-bottom: 5px; padding: 0 5px;">
+        <div style="flex:1;">項目名</div><div style="flex:1;">規定数</div><div style="flex:1;">注文数</div>
     </div>
 
     <div id="itemsContainer">
@@ -38,7 +33,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整パターンを計算する</button>
+    <button class="btn-calc" onclick="calculate()">セットで計算する</button>
 
     <div id="result" class="result-box" style="display:none;"></div>
 
@@ -46,39 +41,35 @@
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
-            div.innerHTML = `<input type="text" class="name" placeholder="名"><input type="number" class="inner" placeholder="数"><input type="number" class="order" placeholder="注">
+            div.innerHTML = `<input type="text" class="name" placeholder="項目名"><input type="number" class="inner" placeholder="規定"><input type="number" class="order" placeholder="注文">
                              <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>`;
             document.getElementById('itemsContainer').appendChild(div);
         }
 
         function calculate() {
             const rows = document.querySelectorAll('.row');
-            const data = [];
+            // 一番セット数の多い項目に合わせて、全体を何セット（何インナー）にするか決める
+            let targetSets = 0;
+            const items = [];
+            
             rows.forEach(r => {
-                data.push({
-                    name: r.querySelector('.name').value || "無題",
-                    inner: parseInt(r.querySelector('.inner').value) || 1,
-                    order: parseInt(r.querySelector('.order').value) || 0
-                });
+                const inner = parseInt(r.querySelector('.inner').value) || 1;
+                const order = parseInt(r.querySelector('.order').value) || 0;
+                const sets = Math.ceil(order / inner);
+                if (sets > targetSets) targetSets = sets;
+                items.push({ name: r.querySelector('.name').value, inner, order });
             });
 
-            let downHtml = "<div class='pattern-title'>▼ 減らしてキリよく（切り捨て）</div>";
-            data.forEach(item => {
-                const sets = Math.floor(item.order / item.inner);
-                const target = sets * item.inner;
-                downHtml += `${item.name}: <strong>${sets}インナー</strong>にする (${target}個 / ${item.order - target}個減らす)<br>`;
-            });
-
-            let upHtml = "<div class='pattern-title'>▲ 増やしてキリよく（切り上げ）</div>";
-            data.forEach(item => {
-                const sets = Math.ceil(item.order / item.inner);
-                const target = sets * item.inner;
-                upHtml += `${item.name}: <strong>${sets}インナー</strong>にする (${target}個 / ${target - item.order}個増やす)<br>`;
+            let html = `<strong>目標: ${targetSets}セット（${targetSets}インナー）で揃える場合</strong><br><br>`;
+            items.forEach(item => {
+                const target = item.inner * targetSets;
+                const diff = target - item.order;
+                html += `<strong>${item.name}</strong>: 現在${item.order}個 → <strong>${diff}個 追加</strong>して計${target}個に<br>`;
             });
 
             const res = document.getElementById('result');
             res.style.display = "block";
-            res.innerHTML = downHtml + "<br>" + upHtml;
+            res.innerHTML = html;
         }
     </script>
 </body>
