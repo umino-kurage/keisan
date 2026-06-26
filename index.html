@@ -2,13 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>発注数計算ツール（項目可変）</title>
+    <title>発注数計算ツール（項目別計算）</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
-        .row { margin-bottom: 5px; display: flex; align-items: center; }
-        label { width: 120px; }
-        input { width: 80px; margin-right: 10px; }
-        button { margin-top: 10px; cursor: pointer; }
+        .row { margin-bottom: 8px; display: flex; align-items: center; }
+        input { width: 100px; margin-right: 10px; padding: 5px; }
+        button { cursor: pointer; padding: 5px 10px; }
         #result { margin-top: 20px; padding: 15px; border: 2px solid #007bff; background: #e7f3ff; }
     </style>
 </head>
@@ -17,12 +16,12 @@
     <h2>発注数計算ツール</h2>
     <div id="itemsContainer">
         <div class="row">
-            <input type="text" placeholder="項目名" value="項目A">
+            <input type="text" class="name" placeholder="項目名" value="項目A">
             <input type="number" class="inner" placeholder="1インナー数" value="7">
             <input type="number" class="order" placeholder="注文数" value="0">
         </div>
         <div class="row">
-            <input type="text" placeholder="項目名" value="項目B">
+            <input type="text" class="name" placeholder="項目名" value="項目B">
             <input type="number" class="inner" placeholder="1インナー数" value="3">
             <input type="number" class="order" placeholder="注文数" value="0">
         </div>
@@ -37,7 +36,7 @@
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
-            div.innerHTML = `<input type="text" placeholder="項目名">
+            div.innerHTML = `<input type="text" class="name" placeholder="項目名">
                              <input type="number" class="inner" placeholder="1インナー数">
                              <input type="number" class="order" placeholder="注文数">
                              <button onclick="this.parentElement.remove()">削除</button>`;
@@ -45,37 +44,29 @@
         }
 
         function calculate() {
-            let totalInner = 0;
-            let totalOrder = 0;
-            const inners = document.querySelectorAll('.inner');
-            const orders = document.querySelectorAll('.order');
+            const rows = document.querySelectorAll('.row');
+            let resultsHtml = "<strong>【項目別計算結果】</strong><br><ul>";
+            
+            rows.forEach(row => {
+                const name = row.querySelector('.name').value || "無題";
+                const inner = parseInt(row.querySelector('.inner').value) || 0;
+                const order = parseInt(row.querySelector('.order').value) || 0;
 
-            for (let i = 0; i < inners.length; i++) {
-                totalInner += parseInt(inners[i].value) || 0;
-                totalOrder += parseInt(orders[i].value) || 0;
-            }
+                if (inner > 0) {
+                    const remainder = order % inner;
+                    if (remainder === 0) {
+                        resultsHtml += `<li>${name}: ぴったりです (計 ${order}個)</li>`;
+                    } else {
+                        const addMore = inner - remainder;
+                        resultsHtml += `<li>${name}: あと ${addMore}個追加 または ${remainder}個減らす</li>`;
+                    }
+                } else {
+                    resultsHtml += `<li>${name}: インナー数を入力してください</li>`;
+                }
+            });
 
-            const remainder = totalOrder % totalInner;
-            const resDiv = document.getElementById('result');
-
-            if (totalInner === 0) {
-                resDiv.innerHTML = "インナー数を入力してください。";
-                return;
-            }
-
-            if (remainder === 0) {
-                resDiv.innerHTML = "<strong>OK！</strong> インナー単位にぴったりです。";
-            } else {
-                const addMore = totalInner - remainder;
-                const reduce = remainder;
-                resDiv.innerHTML = `
-                    <strong>【結果】</strong><br>
-                    1インナー合計: ${totalInner}個<br>
-                    現在の注文合計: ${totalOrder}個<br><br>
-                    ・<strong>あと ${addMore}個 追加</strong>で次のインナーへ<br>
-                    ・<strong>${reduce}個 減らして</strong>前のインナーへ
-                `;
-            }
+            resultsHtml += "</ul>";
+            document.getElementById('result').innerHTML = resultsHtml;
         }
     </script>
 </body>
