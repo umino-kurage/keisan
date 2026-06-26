@@ -36,7 +36,7 @@
     </table>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整計算</button>
+    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
     <div id="result"></div>
 
     <script>
@@ -59,17 +59,18 @@
             });
 
             let plans = [];
-            // sはセット数
             for(let s = 1; s <= 10; s++) {
                 let totalDiff = 0;
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【修正】現在の注文数を無視して、このセット数(s)に合わせるための調整数を計算する
-                    // つまり、このセット数にするために何個必要か？という計算
-                    const diff = Math.abs(perfect - item.order);
+                    // 【ここがポイント】注文数がピッタリ数より少ない場合のみ「差分」を調整とする
+                    const diff = item.order < perfect ? (perfect - item.order) : 0;
+                    // 【ここも重要】発注数は、今の注文数かピッタリ数の大きい方にする
+                    const finalOrder = Math.max(item.order, perfect);
+                    
                     totalDiff += diff;
-                    details.push({ name: item.name, perfect, diff, order: item.order });
+                    details.push({ name: item.name, perfect, diff, order: item.order, finalOrder });
                 });
                 plans.push({ s, totalDiff, details });
             }
@@ -81,9 +82,10 @@
             plans.slice(0, 3).forEach(p => {
                 let html = `<div class="pattern"><strong>【${p.s}セット案】</strong> 合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
+                    let move = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
                     html += `<div><strong>${d.name}</strong><br>
                              ピッタリ数: ${d.perfect}個 | 希望(${d.order})<br>
-                             最終発注数: <strong>${d.perfect}個</strong> (${d.perfect > d.order ? (d.perfect - d.order) + '足す' : (d.perfect < d.order ? (d.order - d.perfect) + '減らす' : '調整なし')})</div><hr>`;
+                             最終発注数: <strong>${d.finalOrder}個</strong> (${move})</div><hr>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
