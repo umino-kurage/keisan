@@ -13,12 +13,12 @@
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
         .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #007bff; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <h2>セット発注最適化</h2>
+    <h2>発注最適化ツール</h2>
     
     <div class="header-row">
         <div>項目名</div><div>規定数</div><div>注文数</div><div></div>
@@ -36,7 +36,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整パターンを表示</button>
+    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
 
     <div id="result"></div>
 
@@ -52,36 +52,46 @@
         function calculate() {
             const rows = document.querySelectorAll('.row');
             const items = [];
-            let maxSets = 0;
             rows.forEach(r => {
-                const name = r.querySelector('.name').value || "無題";
-                const inner = parseInt(r.querySelector('.inner').value) || 1;
-                const order = parseInt(r.querySelector('.order').value) || 0;
-                const sets = Math.ceil(order / inner);
-                if (sets > maxSets) maxSets = sets;
-                items.push({ name, inner, order });
+                items.push({
+                    name: r.querySelector('.name').value || "無題",
+                    inner: parseInt(r.querySelector('.inner').value) || 1,
+                    order: parseInt(r.querySelector('.order').value) || 0
+                });
             });
 
-            const res = document.getElementById('result');
-            res.innerHTML = "";
-
-            // 現在のセット数〜最大セット数+1の範囲で提案を表示
-            for (let s = Math.max(1, maxSets - 1); s <= maxSets + 1; s++) {
-                let html = `<div class="pattern"><strong>目標：${s}セット（${s}インナー）にする場合</strong><br>`;
+            const results = [];
+            // 1セット〜10セットの範囲で計算
+            for (let s = 1; s <= 10; s++) {
+                let totalAdjustment = 0;
+                let details = [];
                 items.forEach(item => {
                     const target = item.inner * s;
                     const diff = target - item.order;
-                    if (diff > 0) {
-                        html += `${item.name}: <strong>${diff} 足す</strong><br>`;
-                    } else if (diff < 0) {
-                        html += `${item.name}: <strong>${Math.abs(diff)} 減らす</strong><br>`;
-                    } else {
-                        html += `${item.name}: <strong>そのままでOK</strong><br>`;
-                    }
+                    totalAdjustment += Math.abs(diff);
+                    details.push({ name: item.name, target, diff });
+                });
+                results.push({ s, totalAdjustment, details });
+            }
+
+            // 調整数が少ない順に並び替え
+            results.sort((a, b) => a.totalAdjustment - b.totalAdjustment);
+
+            const res = document.getElementById('result');
+            res.innerHTML = "";
+            results.slice(0, 3).forEach(r => {
+                let html = `<div class="pattern"><strong>調整合計 ${r.totalAdjustment}個（おすすめプラン）</strong><br>${r.s}セット（${r.s}インナー）にする場合：<br>`;
+                r.details.forEach(d => {
+                    let action = "";
+                    if (d.diff > 0) action = `(${d.diff} 足す)`;
+                    else if (d.diff < 0) action = `(${Math.abs(d.diff)} 減らす)`;
+                    else action = "(そのままでOK)";
+                    
+                    html += `・<strong>${d.name}</strong>: <strong>${d.target}個</strong> ${action}<br>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
-            }
+            });
         }
     </script>
 </body>
