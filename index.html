@@ -4,73 +4,82 @@
     <meta charset="UTF-8">
     <title>セット発注最適化</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
-        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: white; padding: 10px; border-radius: 8px; }
-        input { width: 60px; padding: 8px; }
-        .name-input { width: 100px; }
-        .btn-calc { background: #28a745; color: white; padding: 15px; border: none; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
-        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; line-height: 1.8; }
+        body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
+        .header { display: flex; gap: 8px; font-weight: bold; font-size: 13px; color: #555; margin-bottom: 5px; padding: 0 5px; }
+        .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
+        input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; min-width: 0; }
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 10px; border: none; border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
+        .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <h2>発注最適化ツール</h2>
+    <div class="header">
+        <div style="flex:2">項目名</div><div style="flex:1">規定</div><div style="flex:1">注文数</div><div style="width:30px"></div>
+    </div>
+
     <div id="itemsContainer">
         <div class="row">
-            <input type="text" class="name-input" value="項目A">
+            <input type="text" class="name-input" value="項目A" style="flex:2">
             <input type="number" class="inner-input" value="7">
             <input type="number" class="order-input" value="15">
+            <button onclick="this.parentElement.remove()" style="width:30px; color:red;">×</button>
         </div>
         <div class="row">
-            <input type="text" class="name-input" value="項目B">
+            <input type="text" class="name-input" value="項目B" style="flex:2">
             <input type="number" class="inner-input" value="3">
             <input type="number" class="order-input" value="5">
+            <button onclick="this.parentElement.remove()" style="width:30px; color:red;">×</button>
         </div>
     </div>
 
-    <button class="btn-calc" onclick="calculate()">計算する</button>
+    <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
+    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
+
     <div id="result"></div>
 
     <script>
+        function addRow() {
+            const div = document.createElement('div');
+            div.className = 'row';
+            div.innerHTML = `<input type="text" class="name-input" placeholder="名" style="flex:2"><input type="number" class="inner-input" placeholder="規"><input type="number" class="order-input" placeholder="注"><button onclick="this.parentElement.remove()" style="width:30px; color:red;">×</button>`;
+            document.getElementById('itemsContainer').appendChild(div);
+        }
+
         function calculate() {
-            const names = document.querySelectorAll('.name-input');
-            const inners = document.querySelectorAll('.inner-input');
-            const orders = document.querySelectorAll('.order-input');
-            const res = document.getElementById('result');
-            res.innerHTML = "";
-
-            let items = [];
-            for(let i=0; i<names.length; i++){
+            const items = [];
+            document.querySelectorAll('.row').forEach(row => {
                 items.push({
-                    name: names[i].value,
-                    inner: parseInt(inners[i].value),
-                    order: parseInt(orders[i].value)
+                    name: row.querySelector('.name-input').value,
+                    inner: parseInt(row.querySelector('.inner-input').value) || 0,
+                    order: parseInt(row.querySelector('.order-input').value) || 0
                 });
-            }
+            });
 
-            // 1セット(s=1)から10セット(s=10)まで計算
             let plans = [];
             for(let s = 1; s <= 10; s++) {
                 let totalDiff = 0;
                 let details = [];
                 items.forEach(item => {
-                    const perfectCount = item.inner * s; // 規定ピッタリ数
-                    const diff = perfectCount - item.order; // 今の注文との差
-                    totalDiff += Math.abs(diff); // 調整合計は絶対値
-                    details.push({ name: item.name, perfectCount, diff });
+                    const perfect = item.inner * s;
+                    const diff = perfect - item.order;
+                    totalDiff += Math.abs(diff);
+                    details.push({ name: item.name, perfect, diff });
                 });
                 plans.push({ s, totalDiff, details });
             }
 
-            // 調整合計が少ない順に並べる
             plans.sort((a, b) => a.totalDiff - b.totalDiff);
 
-            // 上位2つを表示
+            const res = document.getElementById('result');
+            res.innerHTML = "";
             plans.slice(0, 2).forEach(p => {
-                let html = `<div class="pattern"><strong>【${p.s}インナー案】（調整合計: ${p.totalDiff}個）</strong><br>`;
+                let html = `<div class="pattern"><strong>【${p.s}インナー(セット)案】</strong><br>調整合計: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    let act = d.diff > 0 ? `${d.diff} 足す` : (d.diff < 0 ? `${Math.abs(d.diff)} 減らす` : "そのまま");
-                    html += `・${d.name}: ピッタリ${d.perfectCount}個 (今の注文数から <strong>${act}</strong>)<br>`;
+                    let act = d.diff > 0 ? `${d.diff} 足す` : (d.diff < 0 ? `${Math.abs(d.diff)} 減らす` : "そのままでOK");
+                    html += `・${d.name}: ピッタリ${d.perfect}個 (${act})<br>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
