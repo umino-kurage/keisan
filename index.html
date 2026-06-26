@@ -2,20 +2,22 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>セット発注最適化</title>
     <style>
-        body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 10px; }
-        th, td { padding: 8px 4px; border: 1px solid #ddd; text-align: center; }
-        input { width: 100%; padding: 5px; box-sizing: border-box; }
-        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
+        body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; margin: 0; }
+        /* 画面幅に完全に合わせる */
+        table { width: 100%; border-collapse: collapse; background: white; table-layout: fixed; }
+        th, td { padding: 8px 4px; border: 1px solid #ddd; text-align: center; word-break: break-all; }
+        input { width: 100%; padding: 8px 2px; box-sizing: border-box; border: 1px solid #ccc; }
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin: 10px 0; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
         .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <h2>発注最適化</h2>
+    <h2>発注最適化ツール</h2>
     <table>
         <thead><tr><th>項目名</th><th>規定</th><th>注文</th><th></th></tr></thead>
         <tbody id="itemsBody">
@@ -58,19 +60,25 @@
             });
 
             let plans = [];
-            for(let s = 1; s <= 10; s++) {
+            for(let s = 1; s <= 20; s++) { // 候補を少し増やす
                 let totalDiff = 0;
                 let details = [];
+                let isPossible = true;
+
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【修正ロジック】注文数が足りていれば調整なし、足りなければ差分を足す
-                    const diff = (perfect > item.order) ? (perfect - item.order) : 0;
-                    const finalOrder = Math.max(item.order, perfect);
-                    
+                    // 【論理修正】注文数がピッタリ数を超えていたら、そのセット数は対象外
+                    if (item.order > perfect) {
+                        isPossible = false;
+                    }
+                    const diff = perfect - item.order;
                     totalDiff += diff;
-                    details.push({ name: item.name, perfect, diff, order: item.order, finalOrder });
+                    details.push({ name: item.name, perfect, diff, order: item.order });
                 });
-                plans.push({ s, totalDiff, details });
+
+                if (isPossible) {
+                    plans.push({ s, totalDiff, details });
+                }
             }
 
             plans.sort((a, b) => a.totalDiff - b.totalDiff);
@@ -80,10 +88,9 @@
             plans.slice(0, 3).forEach(p => {
                 let html = `<div class="pattern"><strong>【${p.s}セット案】</strong> 合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    let act = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
                     html += `<div><strong>${d.name}</strong><br>
                              ピッタリ数: ${d.perfect}個 | 希望(${d.order})<br>
-                             最終発注数: <strong>${d.finalOrder}個</strong> (${act})</div><hr>`;
+                             最終発注数: <strong>${d.perfect}個</strong> (${d.diff > 0 ? d.diff + '足す' : '調整なし'})</div><hr>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
