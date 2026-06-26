@@ -2,7 +2,6 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
@@ -36,7 +35,7 @@
     </table>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
+    <button class="btn-calc" onclick="calculate()">調整計算</button>
     <div id="result"></div>
 
     <script>
@@ -64,9 +63,8 @@
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【ここがポイント】注文数がピッタリ数より少ない場合のみ「差分」を調整とする
-                    const diff = item.order < perfect ? (perfect - item.order) : 0;
-                    // 【ここも重要】発注数は、今の注文数かピッタリ数の大きい方にする
+                    // 【修正ロジック】注文数が足りていれば調整なし、足りなければ差分を足す
+                    const diff = (perfect > item.order) ? (perfect - item.order) : 0;
                     const finalOrder = Math.max(item.order, perfect);
                     
                     totalDiff += diff;
@@ -82,10 +80,10 @@
             plans.slice(0, 3).forEach(p => {
                 let html = `<div class="pattern"><strong>【${p.s}セット案】</strong> 合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    let move = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
+                    let act = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
                     html += `<div><strong>${d.name}</strong><br>
                              ピッタリ数: ${d.perfect}個 | 希望(${d.order})<br>
-                             最終発注数: <strong>${d.finalOrder}個</strong> (${move})</div><hr>`;
+                             最終発注数: <strong>${d.finalOrder}個</strong> (${act})</div><hr>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
