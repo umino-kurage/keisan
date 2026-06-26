@@ -2,71 +2,82 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>発注数計算ツール（項目別計算）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>発注数計算ツール</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        .row { margin-bottom: 8px; display: flex; align-items: center; }
-        input { width: 100px; margin-right: 10px; padding: 5px; }
-        button { cursor: pointer; padding: 5px 10px; }
-        #result { margin-top: 20px; padding: 15px; border: 2px solid #007bff; background: #e7f3ff; }
+        body { font-family: sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; }
+        h2 { text-align: center; color: #333; }
+        .row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        input { flex: 1; min-width: 60px; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        button { width: 100%; padding: 15px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+        .btn-add { background: #6c757d; color: white; }
+        .btn-calc { background: #28a745; color: white; font-weight: bold; }
+        #result { margin-top: 20px; padding: 20px; border-radius: 8px; font-size: 16px; line-height: 1.6; }
+        .ok { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .ng { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        ul { padding-left: 20px; }
     </style>
 </head>
 <body>
 
-    <h2>発注数計算ツール</h2>
+    <h2>発注数計算</h2>
     <div id="itemsContainer">
         <div class="row">
             <input type="text" class="name" placeholder="項目名" value="項目A">
-            <input type="number" class="inner" placeholder="1インナー数" value="7">
+            <input type="number" class="inner" placeholder="インナー数" value="7">
             <input type="number" class="order" placeholder="注文数" value="0">
         </div>
         <div class="row">
             <input type="text" class="name" placeholder="項目名" value="項目B">
-            <input type="number" class="inner" placeholder="1インナー数" value="3">
+            <input type="number" class="inner" placeholder="インナー数" value="3">
             <input type="number" class="order" placeholder="注文数" value="0">
         </div>
     </div>
 
-    <button onclick="addRow()">+ 項目を追加</button>
-    <button onclick="calculate()" style="background:#28a745; color:white;">計算する</button>
+    <button class="btn-add" onclick="addRow()">+ 項目を追加</button>
+    <button class="btn-calc" onclick="calculate()">計算する</button>
 
-    <div id="result">ここに結果が表示されます</div>
+    <div id="result" style="display:none;"></div>
 
     <script>
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
             div.innerHTML = `<input type="text" class="name" placeholder="項目名">
-                             <input type="number" class="inner" placeholder="1インナー数">
-                             <input type="number" class="order" placeholder="注文数">
-                             <button onclick="this.parentElement.remove()">削除</button>`;
+                             <input type="number" class="inner" placeholder="インナー">
+                             <input type="number" class="order" placeholder="注文">
+                             <button style="width:auto; padding:5px; background:#dc3545; color:white;" onclick="this.parentElement.remove()">×</button>`;
             document.getElementById('itemsContainer').appendChild(div);
         }
 
         function calculate() {
             const rows = document.querySelectorAll('.row');
-            let resultsHtml = "<strong>【項目別計算結果】</strong><br><ul>";
-            
+            const resDiv = document.getElementById('result');
+            let isAllOk = true;
+            let html = "<strong>【判定結果】</strong><ul>";
+
             rows.forEach(row => {
-                const name = row.querySelector('.name').value || "無題";
+                const name = row.querySelector('.name').value || "未設定";
                 const inner = parseInt(row.querySelector('.inner').value) || 0;
                 const order = parseInt(row.querySelector('.order').value) || 0;
 
-                if (inner > 0) {
-                    const remainder = order % inner;
-                    if (remainder === 0) {
-                        resultsHtml += `<li>${name}: ぴったりです (計 ${order}個)</li>`;
-                    } else {
-                        const addMore = inner - remainder;
-                        resultsHtml += `<li>${name}: あと ${addMore}個追加 または ${remainder}個減らす</li>`;
-                    }
+                if (inner <= 0) {
+                    html += `<li>${name}: インナー数を設定してください</li>`;
+                    isAllOk = false;
+                } else if (order > 0 && order % inner === 0) {
+                    html += `<li>${name}: ${order / inner}インナー (OK)</li>`;
                 } else {
-                    resultsHtml += `<li>${name}: インナー数を入力してください</li>`;
+                    isAllOk = false;
+                    const nextTarget = (Math.floor(order / inner) + 1) * inner;
+                    const diff = nextTarget - order;
+                    html += `<li>${name}: <strong>NG</strong> (あと${diff}個で${nextTarget/inner}インナー目)</li>`;
                 }
             });
 
-            resultsHtml += "</ul>";
-            document.getElementById('result').innerHTML = resultsHtml;
+            html += "</ul>";
+            resDiv.style.display = "block";
+            resDiv.className = isAllOk ? "ok" : "ng";
+            resDiv.innerHTML = isAllOk ? "<strong>◎ 全てインナー単位で揃っています！</strong>" : html;
         }
     </script>
 </body>
