@@ -6,23 +6,19 @@
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
-        /* 表形式のスタイル */
-        table { width: 100%; border-collapse: collapse; background: white; }
+        table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 10px; }
         th, td { padding: 8px 4px; border: 1px solid #ddd; text-align: center; }
-        input { width: 100%; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; }
-        
-        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin: 10px 0; }
+        input { width: 100%; padding: 5px; box-sizing: border-box; }
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; }
+        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <h2>発注最適化</h2>
-    <table id="itemsTable">
-        <thead>
-            <tr><th>項目名</th><th>規定</th><th>注文</th><th></th></tr>
-        </thead>
+    <table>
+        <thead><tr><th>項目名</th><th>規定</th><th>注文</th><th></th></tr></thead>
         <tbody id="itemsBody">
             <tr>
                 <td><input type="text" class="name-input" value="項目A"></td>
@@ -68,13 +64,10 @@
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【修正ロジック】ピッタリ数に達していないなら、必ずピッタリ数まで足す（diff発生）
-                    // 注文数がピッタリ数を超えているなら、調整なし（diffは0）
+                    // 【修正】希望数がピッタリ数未満なら、ピッタリ数まで足す必要があると判定
                     const diff = item.order < perfect ? (perfect - item.order) : 0;
-                    const finalOrder = item.order < perfect ? perfect : item.order;
-                    
                     totalDiff += diff;
-                    details.push({ name: item.name, perfect, diff, order: item.order, finalOrder });
+                    details.push({ name: item.name, perfect, diff, order: item.order });
                 });
                 plans.push({ s, totalDiff, details });
             }
@@ -84,9 +77,11 @@
             const res = document.getElementById('result');
             res.innerHTML = "";
             plans.slice(0, 3).forEach(p => {
-                let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）案】</strong><br>合計調整数: ${p.totalDiff}個<br>`;
+                let html = `<div class="pattern"><strong>【${p.s}セット案】</strong> 合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    html += `<div><strong>${d.name}</strong>: 希望(${d.order}) → <strong>${d.finalOrder}個</strong> ${d.diff > 0 ? '('+d.diff+'足す)' : '(調整なし)'}</div>`;
+                    html += `<div><strong>${d.name}</strong><br>
+                             ピッタリ数: ${d.perfect}個 | 希望(${d.order}) → <strong>最終発注数: ${Math.max(d.order, d.perfect)}個</strong><br>
+                             ${d.diff > 0 ? '（' + d.diff + '足す）' : '（調整なし）'}</div><hr>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
