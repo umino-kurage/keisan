@@ -6,41 +6,38 @@
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
-        .header { display: flex; font-weight: bold; font-size: 13px; color: #555; margin-bottom: 5px; padding: 0 5px; }
-        .row { background: white; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .row-top { display: flex; gap: 10px; }
-        .row-top input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
-        .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 15px; }
-        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px; }
-        .item-res { border-bottom: 1px solid #eee; padding: 8px 0; }
+        /* 表形式のスタイル */
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 8px 4px; border: 1px solid #ddd; text-align: center; }
+        input { width: 100%; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; }
+        
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin: 10px 0; }
+        .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
+        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <h2>発注最適化ツール</h2>
-    <div class="header">
-        <div style="flex:2">項目名</div><div style="flex:1">規定</div><div style="flex:1">注文数</div><div style="width:30px"></div>
-    </div>
-
-    <div id="itemsContainer">
-        <div class="row">
-            <input type="text" class="name-input" value="項目A" style="margin-bottom:8px">
-            <div class="row-top">
-                <input type="number" class="inner-input" value="7" placeholder="規定">
-                <input type="number" class="order-input" value="15" placeholder="注文">
-                <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:red;">✕</button>
-            </div>
-        </div>
-        <div class="row">
-            <input type="text" class="name-input" value="項目B" style="margin-bottom:8px">
-            <div class="row-top">
-                <input type="number" class="inner-input" value="3" placeholder="規定">
-                <input type="number" class="order-input" value="5" placeholder="注文">
-                <button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:red;">✕</button>
-            </div>
-        </div>
-    </div>
+    <h2>発注最適化</h2>
+    <table id="itemsTable">
+        <thead>
+            <tr><th>項目名</th><th>規定</th><th>注文</th><th></th></tr>
+        </thead>
+        <tbody id="itemsBody">
+            <tr>
+                <td><input type="text" class="name-input" value="項目A"></td>
+                <td><input type="number" class="inner-input" value="7"></td>
+                <td><input type="number" class="order-input" value="15"></td>
+                <td><button onclick="this.parentElement.parentElement.remove()" style="color:red;">✕</button></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="name-input" value="項目B"></td>
+                <td><input type="number" class="inner-input" value="3"></td>
+                <td><input type="number" class="order-input" value="5"></td>
+                <td><button onclick="this.parentElement.parentElement.remove()" style="color:red;">✕</button></td>
+            </tr>
+        </tbody>
+    </table>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
     <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
@@ -48,19 +45,20 @@
 
     <script>
         function addRow() {
-            const div = document.createElement('div');
-            div.className = 'row';
-            div.innerHTML = `<input type="text" class="name-input" placeholder="項目名" style="margin-bottom:8px"><div class="row-top"><input type="number" class="inner-input" placeholder="規定"><input type="number" class="order-input" placeholder="注文"><button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:red;">✕</button></div>`;
-            document.getElementById('itemsContainer').appendChild(div);
+            const tbody = document.getElementById('itemsBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td><input type="text" class="name-input"></td><td><input type="number" class="inner-input"></td><td><input type="number" class="order-input"></td><td><button onclick="this.parentElement.parentElement.remove()" style="color:red;">✕</button></td>`;
+            tbody.appendChild(row);
         }
 
         function calculate() {
+            const rows = document.querySelectorAll('#itemsBody tr');
             const items = [];
-            document.querySelectorAll('.row').forEach(row => {
+            rows.forEach(r => {
                 items.push({
-                    name: row.querySelector('.name-input').value,
-                    inner: parseInt(row.querySelector('.inner-input').value) || 0,
-                    order: parseInt(row.querySelector('.order-input').value) || 0
+                    name: r.querySelector('.name-input').value,
+                    inner: parseInt(r.querySelector('.inner-input').value) || 0,
+                    order: parseInt(r.querySelector('.order-input').value) || 0
                 });
             });
 
@@ -70,9 +68,10 @@
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【修正点】注文数がピッタリ数以上なら調整なし(0)、足りなければ差分を計算
-                    const diff = item.order >= perfect ? 0 : perfect - item.order;
-                    const finalOrder = item.order >= perfect ? item.order : perfect;
+                    // 【修正ロジック】ピッタリ数に達していないなら、必ずピッタリ数まで足す（diff発生）
+                    // 注文数がピッタリ数を超えているなら、調整なし（diffは0）
+                    const diff = item.order < perfect ? (perfect - item.order) : 0;
+                    const finalOrder = item.order < perfect ? perfect : item.order;
                     
                     totalDiff += diff;
                     details.push({ name: item.name, perfect, diff, order: item.order, finalOrder });
@@ -85,16 +84,9 @@
             const res = document.getElementById('result');
             res.innerHTML = "";
             plans.slice(0, 3).forEach(p => {
-                let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）案】</strong><br>
-                             調整合計: ${p.totalDiff}個<br>`;
+                let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）案】</strong><br>合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    let move = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
-                    html += `<div class="item-res">
-                             <strong>${d.name}</strong><br>
-                             ピッタリ数: ${d.perfect}個<br>
-                             希望(${d.order}) → <strong>最終発注数: ${d.finalOrder}個</strong><br>
-                             （${move}）
-                             </div>`;
+                    html += `<div><strong>${d.name}</strong>: 希望(${d.order}) → <strong>${d.finalOrder}個</strong> ${d.diff > 0 ? '('+d.diff+'足す)' : '(調整なし)'}</div>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
