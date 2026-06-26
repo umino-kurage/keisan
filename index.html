@@ -36,7 +36,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整計算</button>
+    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
 
     <div id="result"></div>
 
@@ -52,32 +52,43 @@
         function calculate() {
             const rows = document.querySelectorAll('.row');
             const items = [];
-            let currentMaxSets = 0;
             rows.forEach(r => {
-                const inner = parseInt(r.querySelector('.inner').value) || 1;
-                const order = parseInt(r.querySelector('.order').value) || 0;
-                const sets = Math.ceil(order / inner);
-                if (sets > currentMaxSets) currentMaxSets = sets;
-                items.push({ name: r.querySelector('.name').value, inner, order });
+                items.push({
+                    name: r.querySelector('.name').value,
+                    inner: parseInt(r.querySelector('.inner').value) || 1,
+                    order: parseInt(r.querySelector('.order').value) || 0
+                });
             });
+
+            const plans = [];
+            // 1インナーから10インナーまで全パターン計算
+            for (let s = 1; s <= 10; s++) {
+                let totalDiff = 0;
+                let details = [];
+                items.forEach(item => {
+                    const perfectCount = item.inner * s;
+                    // 足す必要がある場合のみ差分をカウント、減らす必要はないので0
+                    const diff = Math.max(0, perfectCount - item.order);
+                    totalDiff += diff;
+                    details.push({ name: item.name, perfectCount, order: item.order, diff });
+                });
+                plans.push({ s, totalDiff, details });
+            }
+
+            // 調整合計が少ない順に並び替え
+            plans.sort((a, b) => a.totalDiff - b.totalDiff);
 
             const res = document.getElementById('result');
             res.innerHTML = "";
-
-            // 目標セット数を「現在の最大セット数」と「その+1」で提案
-            [currentMaxSets, currentMaxSets + 1].forEach(s => {
-                if (s === 0) return;
-                let totalDiff = 0;
-                let html = `<div class="pattern"><strong>【${s}インナー分に合わせる場合】</strong><br>`;
-                
-                items.forEach(item => {
-                    const perfectCount = item.inner * s; // そのセット数に必要な個数
-                    const diff = Math.max(0, perfectCount - item.order); // 足す必要がある数
-                    totalDiff += diff;
-                    
-                    html += `<strong>${item.name}</strong><br>
-                             ・規定ピッタリ数: ${perfectCount}個<br>
-                             ・発注する数: <strong>${Math.max(item.order, perfectCount)}個</strong> (${diff > 0 ? diff + ' 足す' : 'そのままでOK'})<br><br>`;
+            // 上位2つを表示
+            plans.slice(0, 2).forEach(p => {
+                let html = `<div class="pattern"><strong>【${p.s}インナー案】（調整合計: ${p.totalDiff}個）</strong><br>`;
+                p.details.forEach(d => {
+                    // 発注数は今の注文数に足りない分を足す
+                    const actual = Math.max(d.order, d.perfectCount);
+                    html += `<strong>${d.name}</strong><br>
+                             ・規定ピッタリ数: ${d.perfectCount}個<br>
+                             ・発注する数: <strong>${actual}個</strong> (${d.diff > 0 ? d.diff + ' 足す' : 'そのままでOK'})<br><br>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
