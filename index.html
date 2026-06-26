@@ -6,23 +6,26 @@
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
+        .header { display: flex; font-weight: bold; font-size: 13px; color: #555; margin-bottom: 5px; padding: 0 5px; }
         .row { background: white; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .row-top { display: flex; gap: 10px; margin-bottom: 8px; }
+        .row-top { display: flex; gap: 10px; }
         .row-top input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-bottom: 15px; }
         .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-bottom: 15px; }
         .item-res { border-bottom: 1px solid #eee; padding: 8px 0; }
-        .val { font-weight: bold; color: #28a745; }
     </style>
 </head>
 <body>
 
     <h2>発注最適化ツール</h2>
+    <div class="header">
+        <div style="flex:2">項目名</div><div style="flex:1">規定</div><div style="flex:1">注文数</div><div style="width:30px"></div>
+    </div>
 
     <div id="itemsContainer">
         <div class="row">
-            <input type="text" class="name-input" value="項目A">
+            <input type="text" class="name-input" value="項目A" style="margin-bottom:8px">
             <div class="row-top">
                 <input type="number" class="inner-input" value="7" placeholder="規定">
                 <input type="number" class="order-input" value="15" placeholder="注文">
@@ -30,7 +33,7 @@
             </div>
         </div>
         <div class="row">
-            <input type="text" class="name-input" value="項目B">
+            <input type="text" class="name-input" value="項目B" style="margin-bottom:8px">
             <div class="row-top">
                 <input type="number" class="inner-input" value="3" placeholder="規定">
                 <input type="number" class="order-input" value="5" placeholder="注文">
@@ -47,7 +50,7 @@
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
-            div.innerHTML = `<input type="text" class="name-input" placeholder="項目名"><div class="row-top"><input type="number" class="inner-input" placeholder="規定"><input type="number" class="order-input" placeholder="注文"><button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:red;">✕</button></div>`;
+            div.innerHTML = `<input type="text" class="name-input" placeholder="項目名" style="margin-bottom:8px"><div class="row-top"><input type="number" class="inner-input" placeholder="規定"><input type="number" class="order-input" placeholder="注文"><button onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:red;">✕</button></div>`;
             document.getElementById('itemsContainer').appendChild(div);
         }
 
@@ -67,9 +70,12 @@
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    const diff = perfect - item.order;
-                    totalDiff += Math.abs(diff);
-                    details.push({ name: item.name, perfect, diff, order: item.order });
+                    // 【修正点】注文数がピッタリ数以上なら調整なし(0)、足りなければ差分を計算
+                    const diff = item.order >= perfect ? 0 : perfect - item.order;
+                    const finalOrder = item.order >= perfect ? item.order : perfect;
+                    
+                    totalDiff += diff;
+                    details.push({ name: item.name, perfect, diff, order: item.order, finalOrder });
                 });
                 plans.push({ s, totalDiff, details });
             }
@@ -80,13 +86,13 @@
             res.innerHTML = "";
             plans.slice(0, 3).forEach(p => {
                 let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）案】</strong><br>
-                             合計調整数: ${p.totalDiff}個<br>`;
+                             調整合計: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
-                    let move = d.diff > 0 ? `${d.diff} 足す` : (d.diff < 0 ? `${Math.abs(d.diff)} 減らす` : "調整なし");
+                    let move = d.diff > 0 ? `${d.diff} 足す` : "調整なし";
                     html += `<div class="item-res">
                              <strong>${d.name}</strong><br>
                              ピッタリ数: ${d.perfect}個<br>
-                             希望(${d.order}) → <strong>最終発注数: <span class="val">${d.perfect}個</span></strong><br>
+                             希望(${d.order}) → <strong>最終発注数: ${d.finalOrder}個</strong><br>
                              （${move}）
                              </div>`;
                 });
