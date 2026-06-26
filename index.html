@@ -11,7 +11,7 @@
         input { width: 100%; padding: 5px; box-sizing: border-box; }
         .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; line-height: 1.6; }
+        .pattern { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -36,7 +36,7 @@
     </table>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
+    <button class="btn-calc" onclick="calculate()">調整計算</button>
     <div id="result"></div>
 
     <script>
@@ -59,13 +59,15 @@
             });
 
             let plans = [];
+            // sはセット数
             for(let s = 1; s <= 10; s++) {
                 let totalDiff = 0;
                 let details = [];
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【修正】希望数がピッタリ数未満なら、ピッタリ数まで足す必要があると判定
-                    const diff = item.order < perfect ? (perfect - item.order) : 0;
+                    // 【修正】現在の注文数を無視して、このセット数(s)に合わせるための調整数を計算する
+                    // つまり、このセット数にするために何個必要か？という計算
+                    const diff = Math.abs(perfect - item.order);
                     totalDiff += diff;
                     details.push({ name: item.name, perfect, diff, order: item.order });
                 });
@@ -80,8 +82,8 @@
                 let html = `<div class="pattern"><strong>【${p.s}セット案】</strong> 合計調整数: ${p.totalDiff}個<br>`;
                 p.details.forEach(d => {
                     html += `<div><strong>${d.name}</strong><br>
-                             ピッタリ数: ${d.perfect}個 | 希望(${d.order}) → <strong>最終発注数: ${Math.max(d.order, d.perfect)}個</strong><br>
-                             ${d.diff > 0 ? '（' + d.diff + '足す）' : '（調整なし）'}</div><hr>`;
+                             ピッタリ数: ${d.perfect}個 | 希望(${d.order})<br>
+                             最終発注数: <strong>${d.perfect}個</strong> (${d.perfect > d.order ? (d.perfect - d.order) + '足す' : (d.perfect < d.order ? (d.order - d.perfect) + '減らす' : '調整なし')})</div><hr>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
