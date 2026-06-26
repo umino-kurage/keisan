@@ -7,19 +7,24 @@
     <style>
         body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
         h2 { text-align: center; color: #333; }
+        
+        /* 表題部分のスタイルを確実に固定 */
         .header-row { display: flex; gap: 8px; margin-bottom: 5px; padding: 0 5px; font-weight: bold; font-size: 13px; color: #555; }
         .header-row div { flex: 1; text-align: center; }
         .header-row .btn-space { width: 30px; flex: none; }
+
         .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
+        
         .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
+        
         .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
     </style>
 </head>
 <body>
 
-    <h2>発注最適化ツール</h2>
+    <h2>発注最適化</h2>
     
     <div class="header-row">
         <div>項目名</div><div>規定数</div><div>注文数</div><div class="btn-space"></div>
@@ -37,7 +42,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整計算</button>
+    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
 
     <div id="result"></div>
 
@@ -45,7 +50,7 @@
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
-            div.innerHTML = `<input type="text" class="name" placeholder="項目名"><input type="number" class="inner" placeholder="規定"><input type="number" class="order" placeholder="注文">
+            div.innerHTML = `<input type="text" class="name" placeholder="名"><input type="number" class="inner" placeholder="規"><input type="number" class="order" placeholder="注">
                              <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>`;
             document.getElementById('itemsContainer').appendChild(div);
         }
@@ -55,43 +60,36 @@
             const items = [];
             rows.forEach(r => {
                 items.push({
-                    name: r.querySelector('.name').value || "無題",
-                    inner: parseInt(r.querySelector('.inner').value) || 1,
-                    order: parseInt(r.querySelector('.order').value) || 0
+                    name: r.querySelector('.name').value,
+                    inner: parseInt(r.querySelector('.inner').value),
+                    order: parseInt(r.querySelector('.order').value)
                 });
             });
 
-            // 現在の注文数に近いセット数を基準に計算
-            let baseSets = 0;
-            items.forEach(i => { baseSets = Math.max(baseSets, Math.round(i.order / i.inner)); });
-
             const plans = [];
-            for (let s = Math.max(1, baseSets - 1); s <= baseSets + 1; s++) {
+            for (let s = 1; s <= 10; s++) {
                 let totalDiff = 0;
                 let details = [];
                 items.forEach(item => {
-                    const target = item.inner * s;
-                    const diff = target - item.order;
-                    totalDiff += Math.abs(diff); // 調整する絶対量の合計
-                    details.push({ name: item.name, target, diff });
+                    const perfectCount = item.inner * s; // 規定ピッタリ数
+                    const actualCount = Math.max(item.order, perfectCount); // インナーを満たす発注数
+                    const diff = actualCount - item.order; // 足した数
+                    totalDiff += diff;
+                    details.push({ name: item.name, perfectCount, actualCount, diff });
                 });
                 plans.push({ s, totalDiff, details });
             }
 
-            // 調整数が少ない順に並び替え
             plans.sort((a, b) => a.totalDiff - b.totalDiff);
-
             const res = document.getElementById('result');
             res.innerHTML = "";
             plans.slice(0, 2).forEach(p => {
-                let html = `<div class="pattern"><strong>【${p.s}インナーに調整】(調整合計 ${p.totalDiff}個)</strong><br>`;
+                let html = `<div class="pattern"><strong>【${p.s}セット（${p.s}インナー）案】</strong><br>
+                            調整合計：${p.totalDiff}個追加<br><br>`;
                 p.details.forEach(d => {
-                    let action = "";
-                    if (d.diff > 0) action = `(${d.diff} 足す)`;
-                    else if (d.diff < 0) action = `(${Math.abs(d.diff)} 減らす)`;
-                    else action = "(そのままでOK)";
-                    
-                    html += `・<strong>${d.name}</strong>: <strong>${d.target}個</strong> ${action}<br>`;
+                    html += `<strong>${d.name}</strong><br>
+                             ・規定ピッタリ数: ${d.perfectCount}個<br>
+                             ・発注する数: <strong>${d.actualCount}個</strong> (${d.diff > 0 ? d.diff + ' 追加' : 'そのままでOK'})<br><br>`;
                 });
                 html += `</div>`;
                 res.innerHTML += html;
