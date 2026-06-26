@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>セット発注最適化</title>
+    <title>発注最適化ツール</title>
     <style>
         body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
-        h2 { text-align: center; color: #333; }
-        .header-row { display: flex; gap: 5px; margin-bottom: 5px; padding: 0 5px; font-weight: bold; font-size: 13px; color: #555; }
-        .header-row div { flex: 1; text-align: center; }
         .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
         .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #007bff; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #28a745; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
+        .pattern { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <h2>発注最適化ツール</h2>
     
-    <div class="header-row">
-        <div>項目名</div><div>規定数</div><div>注文数</div><div></div>
+    <div style="display: flex; gap: 5px; font-weight: bold; font-size: 13px; color: #555; margin-bottom: 5px; padding: 0 5px;">
+        <div style="flex:1;">項目名</div><div style="flex:1;">規定数</div><div style="flex:1;">注文数</div>
     </div>
 
     <div id="itemsContainer">
@@ -36,7 +33,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">調整の少ない順に計算</button>
+    <button class="btn-calc" onclick="calculate()">調整計算</button>
 
     <div id="result"></div>
 
@@ -52,42 +49,31 @@
         function calculate() {
             const rows = document.querySelectorAll('.row');
             const items = [];
+            let maxSets = 0;
             rows.forEach(r => {
-                items.push({
-                    name: r.querySelector('.name').value || "無題",
-                    inner: parseInt(r.querySelector('.inner').value) || 1,
-                    order: parseInt(r.querySelector('.order').value) || 0
-                });
+                const name = r.querySelector('.name').value || "無題";
+                const inner = parseInt(r.querySelector('.inner').value) || 1;
+                const order = parseInt(r.querySelector('.order').value) || 0;
+                // 今の注文数が何セット分を満たしているか（切り捨てで計算）
+                const currentSets = Math.floor(order / inner);
+                if (currentSets > maxSets) maxSets = currentSets;
+                items.push({ name, inner, order });
             });
 
-            const results = [];
-            // 1セット〜10セットの範囲で計算
-            for (let s = 1; s <= 10; s++) {
-                let totalAdjustment = 0;
-                let details = [];
-                items.forEach(item => {
-                    const target = item.inner * s;
-                    const diff = target - item.order;
-                    totalAdjustment += Math.abs(diff);
-                    details.push({ name: item.name, target, diff });
-                });
-                results.push({ s, totalAdjustment, details });
-            }
-
-            // 調整数が少ない順に並び替え
-            results.sort((a, b) => a.totalAdjustment - b.totalAdjustment);
-
+            // 目標セット数を「今の最大セット数」または「その+1」で提案
             const res = document.getElementById('result');
             res.innerHTML = "";
-            results.slice(0, 3).forEach(r => {
-                let html = `<div class="pattern"><strong>調整合計 ${r.totalAdjustment}個（おすすめプラン）</strong><br>${r.s}セット（${r.s}インナー）にする場合：<br>`;
-                r.details.forEach(d => {
-                    let action = "";
-                    if (d.diff > 0) action = `(${d.diff} 足す)`;
-                    else if (d.diff < 0) action = `(${Math.abs(d.diff)} 減らす)`;
-                    else action = "(そのままでOK)";
-                    
-                    html += `・<strong>${d.name}</strong>: <strong>${d.target}個</strong> ${action}<br>`;
+
+            [maxSets, maxSets + 1].forEach(s => {
+                if (s === 0) return;
+                let html = `<div class="pattern"><strong>目標：${s}インナーセット分に合わせる場合</strong><br>`;
+                items.forEach(item => {
+                    const target = item.inner * s;
+                    if (item.order < target) {
+                        html += `・<strong>${item.name}</strong>: ${item.order}個 → <strong>${target - item.order} 足して ${target}個</strong>に<br>`;
+                    } else {
+                        html += `・<strong>${item.name}</strong>: ${item.order}個 → <strong>そのまま（${item.order}個）</strong><br>`;
+                    }
                 });
                 html += `</div>`;
                 res.innerHTML += html;
