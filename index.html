@@ -6,7 +6,6 @@
     <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; margin: 0; }
-        /* 画面幅に完全に合わせる */
         table { width: 100%; border-collapse: collapse; background: white; table-layout: fixed; }
         th, td { padding: 8px 4px; border: 1px solid #ddd; text-align: center; word-break: break-all; }
         input { width: 100%; padding: 8px 2px; box-sizing: border-box; border: 1px solid #ccc; }
@@ -60,14 +59,14 @@
             });
 
             let plans = [];
-            for(let s = 1; s <= 20; s++) { // 候補を少し増やす
+            for(let s = 1; s <= 20; s++) {
                 let totalDiff = 0;
                 let details = [];
                 let isPossible = true;
 
                 items.forEach(item => {
                     const perfect = item.inner * s;
-                    // 【論理修正】注文数がピッタリ数を超えていたら、そのセット数は対象外
+                    // 【判定】注文数がピッタリ数より大きければ、このセット数では足りない
                     if (item.order > perfect) {
                         isPossible = false;
                     }
