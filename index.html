@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>セット発注計算ツール</title>
+    <title>セット発注最適化</title>
     <style>
         body { font-family: sans-serif; padding: 15px; background-color: #f8f9fa; }
         h2 { text-align: center; color: #333; }
         .row { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 0; }
-        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 20px; }
+        .btn-add { background: #6c757d; color: white; width: 100%; padding: 12px; border: none; border-radius: 8px; margin-bottom: 10px; }
         .btn-calc { background: #28a745; color: white; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; }
-        .result-box { background: white; padding: 15px; border-radius: 10px; border: 1px solid #28a745; margin-top: 20px; }
+        .result-box { background: white; padding: 15px; border-radius: 10px; border: 1px solid #ddd; margin-top: 20px; line-height: 1.6; }
+        .pattern { margin-top: 15px; padding: 10px; border-radius: 8px; }
+        .up { background: #e8f5e9; border: 1px solid #c8e6c9; }
+        .down { background: #fff3e0; border: 1px solid #ffe0b2; }
     </style>
 </head>
 <body>
@@ -33,7 +36,7 @@
     </div>
 
     <button class="btn-add" onclick="addRow()">＋ 項目を追加</button>
-    <button class="btn-calc" onclick="calculate()">セットで計算する</button>
+    <button class="btn-calc" onclick="calculate()">計算する</button>
 
     <div id="result" class="result-box" style="display:none;"></div>
 
@@ -41,35 +44,44 @@
         function addRow() {
             const div = document.createElement('div');
             div.className = 'row';
-            div.innerHTML = `<input type="text" class="name" placeholder="項目名"><input type="number" class="inner" placeholder="規定"><input type="number" class="order" placeholder="注文">
+            div.innerHTML = `<input type="text" class="name" placeholder="項目"><input type="number" class="inner" placeholder="規定"><input type="number" class="order" placeholder="注文">
                              <button style="width:30px; background:none; color:red;" onclick="this.parentElement.remove()">×</button>`;
             document.getElementById('itemsContainer').appendChild(div);
         }
 
         function calculate() {
             const rows = document.querySelectorAll('.row');
-            // 一番セット数の多い項目に合わせて、全体を何セット（何インナー）にするか決める
-            let targetSets = 0;
+            let maxSets = 0;
             const items = [];
             
             rows.forEach(r => {
                 const inner = parseInt(r.querySelector('.inner').value) || 1;
                 const order = parseInt(r.querySelector('.order').value) || 0;
                 const sets = Math.ceil(order / inner);
-                if (sets > targetSets) targetSets = sets;
+                if (sets > maxSets) maxSets = sets;
                 items.push({ name: r.querySelector('.name').value, inner, order });
             });
 
-            let html = `<strong>目標: ${targetSets}セット（${targetSets}インナー）で揃える場合</strong><br><br>`;
+            // 1. 増やす案（最大セット数に合わせて揃える）
+            let upHtml = `<div class="pattern up"><strong>【増やす案：${maxSets}セットに揃える】</strong><br>`;
             items.forEach(item => {
-                const target = item.inner * targetSets;
-                const diff = target - item.order;
-                html += `<strong>${item.name}</strong>: 現在${item.order}個 → <strong>${diff}個 追加</strong>して計${target}個に<br>`;
+                const target = item.inner * maxSets;
+                upHtml += `${item.name}: ${target - item.order}個追加で計${target}個<br>`;
             });
+            upHtml += `</div>`;
+
+            // 2. 減らす案（1つ下のセット数に揃える ※0セットは除外）
+            const minSets = Math.max(1, maxSets - 1);
+            let downHtml = `<div class="pattern down"><strong>【減らす案：${minSets}セットに揃える】</strong><br>`;
+            items.forEach(item => {
+                const target = item.inner * minSets;
+                downHtml += `${item.name}: ${item.order - target}個減らして計${target}個<br>`;
+            });
+            downHtml += `</div>`;
 
             const res = document.getElementById('result');
             res.style.display = "block";
-            res.innerHTML = html;
+            res.innerHTML = upHtml + downHtml;
         }
     </script>
 </body>
