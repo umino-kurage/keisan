@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2b6cb0">
+<link rel="apple-touch-icon" href="icon-192.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>セット発注最適化・提案ツール</title>
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --secondary-color: #319795;
+            --success-color: #2f855a;
+            --warning-color: #dd6b20;
+            --background-color: #f7fafc;
+            --card-background: #ffffff;
+            --border-color: #e2e8f0;
+            --text-color: #2d3748;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 15px;
+        }
+
+        th {
+            background-color: #edf2f7;
+            color: #4a5568;
+            font-weight: 600;
+            padding: 12px 8px;
+            border-bottom: 2px solid var(--border-color);
+            text-align: center;
+        }
+
+        td {
+            padding: 10px 6px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+        }
+
+        .name-input { text-align: left; }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #e53e3e;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #fed7d7;
+        }
+
+        .btn-add {
+            background: #edf2f7;
+            color: #4a5568;
+            width: 100%;
+            padding: 12px;
+            border: 1px dashed #cbd5e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #e2e8f0;
+            border-color: #a0aec0;
+        }
+
+        .btn-calc {
+            background: linear-gradient(135deg, var(--primary-color), #4299e1);
+            color: white;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(66, 153, 225, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-calc:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 7px 14px rgba(66, 153, 225, 0.4);
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            color: #2d3748;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 10px;
+        }
+
+        .pattern-box {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .pattern-perfect { border-left: 6px solid var(--success-color); }
+        .pattern-suggest { border-left: 6px solid var(--secondary-color); }
+
+        .pattern-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 8px;
+        }
+
+        .tag-perfect { color: var(--success-color); }
+        .tag-suggest { color: var(--primary-color); }
+
+        .detail-item {
+            padding: 8px 0;
+            border-bottom: 1px dashed #edf2f7;
+        }
+        .detail-item:last-child { border-bottom: none; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .badge-plus { background: #fed7d7; color: #c53030; }
+        .badge-minus { background: #ebf8ff; color: #2b6cb0; }
+        .badge-zero { background: #e6fffa; color: #234e52; }
+
+        .summary-info {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>発注最適化＆カリスマ提案ツール</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40%;">項目名（色・種類など）</th>
+                    <th style="width: 25%;">1箱の定数</th>
+                    <th style="width: 25%;">購入希望数</th>
+                    <th style="width: 10%;"></th>
+                </tr>
+            </thead>
+            <tbody id="itemsBody">
+                <tr>
+                    <td><input type="text" class="name-input" value="項目A"></td>
+                    <td><input type="number" class="inner-input" value="7"></td>
+                    <td><input type="number" class="order-input" value="15"></td>
+                    <td><button class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></td>
+                </tr>
+                <tr>
+                    <td><input type="text" class="name-input" value="項目B"></td>
+                    <td><input type="number" class="inner-input" value="3"></td>
+                    <td><input type="number" class="order-input" value="5"></td>
+                    <td><button class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button class="btn-add" onclick="addRow()">＋ 項目を追加する</button>
+        <button class="btn-calc" onclick="calculate()">最適な発注パターンを計算する</button>
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    function addRow() {
+        const tbody = document.getElementById('itemsBody');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="text" class="name-input" placeholder="新項目"></td>
+            <td><input type="number" class="inner-input" value="0"></td>
+            <td><input type="number" class="order-input" value="0"></td>
+            <td><button class="btn-delete" onclick="this.parentElement.parentElement.remove()">✕</button></td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function calculate() {
+        const rows = document.querySelectorAll('#itemsBody tr');
+        const items = [];
+        let maxRequiredBoxes = 0; // すべての希望を満たすために最低限必要な箱数
+
+        rows.forEach(r => {
+            const name = r.querySelector('.name-input').value || '未設定';
+            const inner = parseInt(r.querySelector('.inner-input').value) || 0;
+            const order = parseInt(r.querySelector('.order-input').value) || 0;
+            
+            if (inner > 0) {
+                items.push({ name, inner, order });
+                // この項目単体で希望を満たすために必要な箱数
+                const reqBoxes = Math.ceil(order / inner);
+                if (reqBoxes > maxRequiredBoxes) {
+                    maxRequiredBoxes = reqBoxes;
+                }
+            }
+        });
+
+        if (items.length === 0) {
+            alert('有効な定数が入力された項目がありません。');
+            return;
+        }
+
+        const res = document.getElementById('result');
+        res.innerHTML = "";
+
+        // --- ① そのまま発注可能かのチェック ---
+        // すべての項目で、(order % inner === 0) かつ、必要な箱数(order / inner)がすべて一致しているか
+        let isPerfect = true;
+        let perfectBoxes = items[0].order / items[0].inner;
+        
+        items.forEach(item => {
+            if (item.order % item.inner !== 0 || (item.order / item.inner) !== perfectBoxes) {
+                isPerfect = false;
+            }
+        });
+
+        if (isPerfect && perfectBoxes > 0 && Number.isInteger(perfectBoxes)) {
+            // そのまま発注可能な場合
+            let html = `
+                <div class="result-title">判定結果</div>
+                <div class="pattern-box pattern-perfect">
+                    <div class="pattern-header">
+                        <span class="tag-perfect">🎉 【そのまま発注可能です！】</span>
+                        <span>発注箱数: <strong>${perfectBoxes} 箱</strong></span>
+                    </div>
+                    <p>お客様の希望数と1箱の定数の比率が完全に一致しています。調整の必要はありません。</p>
+                    <div class="summary-info">
+                        <strong>発注内容（1箱あたり各種：[${items.map(i => i.name + ':' + i.inner + '個').join(', ')}]）</strong><br>
+                        総発注数：${items.map(i => i.name + ' ' + i.order + '個').join(' / ')}<br>
+                        店舗在庫に回る分：<strong>0 個 (なし)</strong>
+                    </div>
+                </div>`;
+            res.innerHTML = html;
+            return;
+        }
+
+        // --- ② 不可能な場合、2パターンの提案を作成 ---
+        // 候補となる箱数を決定。
+        // 希望をすべて満たす最小の箱数 (maxRequiredBoxes) と、その1つ下の箱数 (maxRequiredBoxes - 1)
+        // ただし、1つ下の箱数が0箱になる場合は、1箱と2箱を候補にする
+        let boxCandidates = [maxRequiredBoxes, maxRequiredBoxes - 1];
+        if (maxRequiredBoxes - 1 <= 0) {
+            boxCandidates = [1, 2];
+        }
+
+        let plans = [];
+
+        boxCandidates.forEach(boxCount => {
+            let totalDiffAbs = 0; // 希望数とのズレの絶対値合計（近さの指標）
+            let totalStock = 0;   // 店舗在庫の合計
+            let details = [];
+
+            items.forEach(item => {
+                const boxContent = item.inner * boxCount; // 発注する箱の中に入っている各種の合計数
+                const diff = boxContent - item.order;    // 定数×箱数 - 希望数 (正なら余り、負なら不足)
+                
+                let finalCustomerBuy = 0; // お客様に買って頂く数
+                let storeStock = 0;       // 店舗在庫に回る数
+
+                if (diff >= 0) {
+                    // 箱の中身が希望以上のとき
+                    // お客様には希望数通り買ってもらい、余りは店舗在庫とする
+                    finalCustomerBuy = item.order;
+                    storeStock = diff;
+                } else {
+                    // 箱の中身が希望より少ないとき
+                    // 箱の中身の全数を買ってもらう（希望より減る）
+                    finalCustomerBuy = boxContent;
+                    storeStock = 0;
+                }
+
+                totalDiffAbs += Math.abs(diff);
+                totalStock += storeStock;
+
+                details.push({
+                    name: item.name,
+                    inner: item.inner,
+                    order: item.order,
+                    boxContent,
+                    diff,
+                    finalCustomerBuy,
+                    storeStock
+                });
+            });
+
+            plans.push({ boxCount, totalDiffAbs, totalStock, details });
+        });
+
+        // 希望に一番近い順（totalDiffAbsが小さい順）にソート
+        plans.sort((a, b) => a.totalDiffAbs - b.totalDiffAbs);
+
+        // 結果の描画
+        let html = `<div class="result-title">💡 おすすめの提案 2パターン</div>`;
+
+        plans.forEach((p, idx) => {
+            html += `
+                <div class="pattern-box pattern-suggest">
+                    <div class="pattern-header">
+                        <span class="tag-suggest">【パターン${idx + 1}】 ${p.boxCount}箱発注案</span>
+                        <span>（希望との差の合計: ${p.totalDiffAbs}個）</span>
+                    </div>
+                    <div>
+            `;
+
+            p.details.forEach(d => {
+                let badge = "";
+                let diffText = "";
+                if (d.diff > 0) {
+                    badge = `<span class="badge badge-plus">店舗在庫に ${d.diff}個</span>`;
+                    diffText = `希望より <strong>${d.diff}個多く</strong> 箱に入っています（お客様は希望通り購入、余りは店舗在庫へ）`;
+                } else if (d.diff < 0) {
+                    badge = `<span class="badge badge-minus">お客様へ ${Math.abs(d.diff)}個の減少相談</span>`;
+                    diffText = `希望より <strong>${Math.abs(d.diff)}個不足</strong> します。お客様へは <strong>${d.boxContent}個</strong> でのご購入を提案します`;
+                } else {
+                    badge = `<span class="badge badge-zero">ピッタリ</span>`;
+                    diffText = `希望通りピッタリです！`;
+                }
+
+                html += `
+                    <div class="detail-item">
+                        <strong>${d.name}</strong> (1箱に${d.inner}個入) ${badge}<br>
+                        ・お客様の希望: ${d.order}個<br>
+                        ・発注箱の中身: ${d.boxContent}個<br>
+                        ・提案内容: ${diffText}<br>
+                        ・最終お買い上げ数: <strong>${d.finalCustomerBuy}個</strong> | 店舗在庫に回る数: <strong>${d.storeStock}個</strong>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                    <div class="summary-info">
+                        <strong>【${p.boxCount}箱発注のまとめ】</strong><br>
+                        ・業者への発注箱数: <strong>${p.boxCount} 箱</strong><br>
+                        ・この箱の中に入っている全数量: ${p.details.map(d => d.name + ' ' + d.boxContent + '個').join(', ')}<br>
+                        ・店舗在庫に回される合計: <span style="color:${p.totalStock > 0 ? '#c53030' : 'inherit'}; font-weight:bold;">${p.totalStock} 個</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        res.innerHTML = html;
+    }
+    // サービスワーカー（裏方スクリプト）を登録するコード
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('PWA Service Worker 登録完了！'))
+    .catch(err => console.log('登録失敗:', err));
+}
+</script>
+
+</body>
+</html>
